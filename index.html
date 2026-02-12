@@ -59,30 +59,23 @@
     document.getElementById('authBtn').innerText = isLogin ? 'Login' : 'Create Account';
 }
 
-  async function handleAuth() {
+ async function handleAuth() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const name = document.getElementById('displayName').value;
-    const file = document.getElementById('profilePic').files[0];
 
     try {
         if (isLogin) {
             await auth.signInWithEmailAndPassword(email, password);
         } else {
             const res = await auth.createUserWithEmailAndPassword(email, password);
-            let photoURL = "https://via.placeholder.com/150"; // Default image
+            
+            // Generate a free, unique avatar URL using their UID
+            // 'identicon' creates a unique geometric pattern for every user automatically
+            const photoURL = `https://www.gravatar.com/avatar/${res.user.uid}?d=identicon`;
 
-            if (file) {
-                // Upload to Firebase Storage
-                const storageRef = firebase.storage().ref(`profile_pics/${res.user.uid}`);
-                const uploadTask = await storageRef.put(file);
-                photoURL = await uploadTask.ref.getDownloadURL();
-            }
-
-            // Update Auth Profile
             await res.user.updateProfile({ displayName: name, photoURL: photoURL });
 
-            // Save to Database
             await db.ref('users/' + res.user.uid).set({
                 uid: res.user.uid,
                 name: name,
@@ -98,6 +91,7 @@
 </script>
 </body>
 </html>
+
 
 
 
