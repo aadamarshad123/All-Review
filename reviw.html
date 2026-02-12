@@ -237,20 +237,28 @@
     const reviewsList = document.getElementById('reviewsList');
     const div = document.createElement('div');
     div.className = 'review-card';
+    
+    // We fetch the target's avatar for a "Profile" feel
+    const avatarUrl = `https://www.gravatar.com/avatar/${review.targetUserId}?d=identicon`;
+
     div.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong>To: ${review.targetName}</strong>
-            <span class="stars-display">${'★'.repeat(review.stars)}</span>
-        </div>
-        <div class="comment-text">"${review.comment}"</div>
-        <div style="margin-top:8px; font-size:0.75rem; color:#94a3b8;">
-            By: ${review.reviewerName} • ${new Date(review.timestamp).toLocaleDateString()}
+        <div style="display:flex; align-items:center; gap:15px;">
+            <img src="${avatarUrl}" style="width:40px; height:40px; border-radius:50%; background:#eee;">
+            <div style="flex-grow:1;">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>To: ${review.targetName}</strong>
+                    <span class="stars-display">${'★'.repeat(review.stars)}</span>
+                </div>
+                <div class="comment-text">"${review.comment}"</div>
+                <small style="color:#94a3b8">From: ${review.reviewerName}</small>
+            </div>
         </div>
     `;
     reviewsList.prepend(div);
-  }
+}
 </script>
 
 </body>
 </html>
+
 
