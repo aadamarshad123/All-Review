@@ -49,31 +49,45 @@
 
   let isLogin = true;
 
-  function toggleAuth() {
+ function toggleAuth() {
     isLogin = !isLogin;
+    const isSignup = !isLogin;
     document.getElementById('authTitle').innerText = isLogin ? 'Login' : 'Sign Up';
-    document.getElementById('displayName').style.display = isLogin ? 'none' : 'block';
+    document.getElementById('displayName').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('profilePic').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('fileLabel').style.display = isSignup ? 'block' : 'none';
     document.getElementById('authBtn').innerText = isLogin ? 'Login' : 'Create Account';
-    document.getElementById('toggleMsg').innerText = isLogin ? 'Need an account? Sign Up' : 'Have an account? Login';
-  }
+}
 
   async function handleAuth() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const name = document.getElementById('displayName').value;
+    const file = document.getElementById('profilePic').files[0];
 
     try {
         if (isLogin) {
             await auth.signInWithEmailAndPassword(email, password);
         } else {
             const res = await auth.createUserWithEmailAndPassword(email, password);
-            // 1. Update the Firebase Auth profile
-            await res.user.updateProfile({ displayName: name });
-            // 2. Save to the Realtime Database
+            let photoURL = "https://via.placeholder.com/150"; // Default image
+
+            if (file) {
+                // Upload to Firebase Storage
+                const storageRef = firebase.storage().ref(`profile_pics/${res.user.uid}`);
+                const uploadTask = await storageRef.put(file);
+                photoURL = await uploadTask.ref.getDownloadURL();
+            }
+
+            // Update Auth Profile
+            await res.user.updateProfile({ displayName: name, photoURL: photoURL });
+
+            // Save to Database
             await db.ref('users/' + res.user.uid).set({
                 uid: res.user.uid,
                 name: name,
-                email: email
+                email: email,
+                photoURL: photoURL
             });
         }
         window.location.href = 'reviw.html';
@@ -84,5 +98,6 @@
 </script>
 </body>
 </html>
+
 
 
