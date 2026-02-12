@@ -16,6 +16,7 @@
     </style>
 </head>
 <body>
+    <img id="displayPic" src="" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
 
 <div class="profile-header">
     <a href="reviw.html" class="nav-btn">← Back to Search</a>
@@ -56,9 +57,11 @@
   async function loadUserData(uid) {
     const snapshot = await db.ref('users/' + uid).once('value');
     if (snapshot.exists()) {
-        document.getElementById('welcomeName').innerText = snapshot.val().name + "'s Profile";
+        const userData = snapshot.val();
+        document.getElementById('welcomeName').innerText = userData.name + "'s Profile";
+        document.getElementById('displayPic').src = userData.photoURL || "https://via.placeholder.com/150";
     }
-  }
+}
 
   function loadMyReviews(uid) {
     const reviewsRef = db.ref('reviews');
@@ -99,3 +102,4 @@
 </body>
 
 </html>
+
