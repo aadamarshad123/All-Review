@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Star Profile</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 2rem; display: flex; flex-direction: column; align-items: center; }
+        .profile-header { text-align: center; margin-bottom: 2rem; }
+        .stats-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; margin-bottom: 2rem; }
+        .review-card { background: white; padding: 1.2rem; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); width: 100%; max-width: 500px; }
+        .stars { color: #fbbf24; font-size: 1.2rem; }
+        .nav-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="profile-header">
+    <a href="reviw.html" class="nav-btn">← Back to Search</a>
+    <h1 id="welcomeName">Loading Profile...</h1>
+    <p id="userUid" style="color: #64748b; font-size: 0.8rem;"></p>
+</div>
+
+<div class="stats-card">
+    <h3>Your Rating Average</h3>
+    <div id="avgRating" style="font-size: 2.5rem; font-weight: bold; color: var(--primary);">--</div>
+    <div id="totalReviews" style="color: #64748b;">0 reviews total</div>
+</div>
+
+<div id="myReviewsList" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+    </div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script>
+  // ... (Use your firebaseConfig here) ...
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+        document.getElementById('userUid').innerText = "Your UID: " + user.uid;
+        loadUserData(user.uid);
+        loadMyReviews(user.uid);
+    } else {
+        window.location.href = 'login.html'; // Redirect if not logged in
+    }
+  });
+
+  async function loadUserData(uid) {
+    const snapshot = await db.ref('users/' + uid).once('value');
+    if (snapshot.exists()) {
+        document.getElementById('welcomeName').innerText = snapshot.val().name + "'s Profile";
+    }
+  }
+
+  function loadMyReviews(uid) {
+    const reviewsRef = db.ref('reviews');
+    // Filter reviews where targetUserId equals the logged-in user's ID
+    reviewsRef.orderByChild('targetUserId').equalTo(uid).on('value', (snapshot) => {
+        const list = document.getElementById('myReviewsList');
+        list.innerHTML = '';
+        
+        let totalStars = 0;
+        let count = 0;
+
+        snapshot.forEach((child) => {
+            const data = child.val();
+            totalStars += data.stars;
+            count++;
+            
+            const div = document.createElement('div');
+            div.className = 'review-card';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span class="stars">${'★'.repeat(data.stars)}</span>
+                    <small style="color: #94a3b8;">${new Date(data.timestamp).toLocaleDateString()}</small>
+                </div>
+                <p style="margin: 10px 0;">"${data.comment}"</p>
+                <small>— From: ${data.reviewerName}</small>
+            `;
+            list.prepend(div);
+        });
+
+        // Update stats
+        if(count > 0) {
+            document.getElementById('avgRating').innerText = (totalStars / count).toFixed(1);
+            document.getElementById('totalReviews').innerText = count + " reviews total";
+        }
+    });
+  }
+</script>
+</body>
+</html>

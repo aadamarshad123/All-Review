@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StarReview - Login</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: var(--primary); }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .toggle { text-align: center; margin-top: 15px; font-size: 0.9rem; color: #64748b; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h2 id="authTitle">Login to StarReview</h2>
+    <input type="text" id="displayName" placeholder="Full Name (for your profile)" style="display:none;">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="handleAuth()" id="authBtn">Login</button>
+    <div class="toggle" onclick="toggleAuth()" id="toggleMsg">Need an account? Sign Up</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "starreview-f2af8.firebaseapp.com",
+    databaseURL: "https://starreview-f2af8-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "starreview-f2af8",
+    storageBucket: "starreview-f2af8.appspot.com",
+    messagingSenderId: "YOUR_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let isLogin = true;
+
+  function toggleAuth() {
+    isLogin = !isLogin;
+    document.getElementById('authTitle').innerText = isLogin ? 'Login' : 'Sign Up';
+    document.getElementById('displayName').style.display = isLogin ? 'none' : 'block';
+    document.getElementById('authBtn').innerText = isLogin ? 'Login' : 'Create Account';
+    document.getElementById('toggleMsg').innerText = isLogin ? 'Need an account? Sign Up' : 'Have an account? Login';
+  }
+
+  async function handleAuth() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const name = document.getElementById('displayName').value;
+
+    try {
+        if (isLogin) {
+            await auth.signInWithEmailAndPassword(email, password);
+        } else {
+            const res = await auth.createUserWithEmailAndPassword(email, password);
+            // Save user profile to database so others can find them
+            await db.ref('users/' + res.user.uid).set({
+                uid: res.user.uid,
+                name: name,
+                email: email
+            });
+        }
+        window.location.href = 'reviw.html'; // Redirect to main app
+    } catch (error) {
+        alert(error.message);
+    }
+  }
+</script>
+</body>
+</html>
