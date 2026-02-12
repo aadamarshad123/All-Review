@@ -113,6 +113,12 @@
         .user-tag { font-size: 0.7rem; color: #94a3b8; }
     </style>
 </head>
+
+<nav style="width: 100%; max-width: 500px; display: flex; justify-content: space-between; padding: 10px;">
+    <button onclick="window.location.href='profile.html'" style="width: auto; padding: 8px 15px; background: #64748b;">My Profile</button>
+    <button onclick="firebase.auth().signOut().then(() => window.location.href='login.html')" style="width: auto; padding: 8px 15px; background: #ef4444;">Logout</button>
+</nav>
+
 <body>
 
 <div class="container">
@@ -148,23 +154,23 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "starreview-f2af8.firebaseapp.com",
-    databaseURL: "https://starreview-f2af8-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "starreview-f2af8",
-    storageBucket: "starreview-f2af8.appspot.com",
-    messagingSenderId: "YOUR_ID",
-    appId: "YOUR_APP_ID"
-  };
-
+  // ... Keep your firebaseConfig ...
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+  const auth = firebase.auth(); // Added auth reference
   let selectedUserId = null;
-  
- // Listen for reviews for EVERYONE to show a live feed
-  db.ref('reviews').on('child_added', (snapshot) => {
-    renderReview(snapshot.val());
+
+  // IMPORTANT: Wait for Auth to initialize
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+        window.location.href = 'login.html'; // Redirect if not logged in
+    }
+  });
+
+  // Live feed: Added safety check to prevent empty renders
+  db.ref('reviews').limitToLast(20).on('child_added', (snapshot) => {
+    const data = snapshot.val();
+    if(data) renderReview(data);
   });
 
   async function searchProfiles() {
@@ -178,11 +184,13 @@
 
     snapshot.forEach(child => {
         const user = child.val();
-        if(user.name.toLowerCase().includes(query)) {
+        // Prevent searching for yourself (optional, but cleaner)
+        if(user.name.toLowerCase().includes(query) && user.uid !== auth.currentUser.uid) {
             const div = document.createElement('div');
-            div.style.padding = '10px';
+            div.style.padding = '12px';
+            div.style.borderBottom = '1px solid #f1f5f9';
             div.style.cursor = 'pointer';
-            div.innerHTML = `${user.name} <span class="user-tag">(${user.uid.substring(0,6)})</span>`;
+            div.innerHTML = `<strong>${user.name}</strong> <span class="user-tag">ID: ${user.uid.substring(0,6)}</span>`;
             div.onclick = () => selectUser(user.uid, user.name);
             resultsDiv.appendChild(div);
         }
@@ -192,32 +200,36 @@
   function selectUser(uid, name) {
     selectedUserId = uid;
     document.getElementById('targetName').innerText = name;
-    document.getElementById('targetId').innerText = "ID: " + uid;
+    document.getElementById('targetId').innerText = "Target ID: " + uid;
     document.getElementById('selectedProfile').style.display = 'block';
     document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('searchUser').value = name; // Auto-fill search with choice
   }
 
   function postReview() {
     const commentInput = document.getElementById('userComment');
     const starInput = document.querySelector('input[name="stars"]:checked');
-    const currentUser = firebase.auth().currentUser;
+    const currentUser = auth.currentUser;
 
     if (!selectedUserId || !starInput) {
-        alert("Select a person and a rating!");
+        alert("Please find a user and select a star rating!");
         return;
     }
 
     db.ref('reviews').push({
         targetUserId: selectedUserId,
-        reviewerName: currentUser ? currentUser.email.split('@')[0] : "Anonymous",
+        reviewerName: currentUser.displayName || currentUser.email.split('@')[0],
         targetName: document.getElementById('targetName').innerText,
         comment: commentInput.value || "No comment.",
         stars: parseInt(starInput.value),
         timestamp: Date.now()
+    }).then(() => {
+        // Reset form
+        commentInput.value = '';
+        document.getElementById('selectedProfile').style.display = 'none';
+        selectedUserId = null;
+        alert("Review posted successfully!");
     });
-
-    commentInput.value = '';
-    alert("Review posted!");
   }
 
   function renderReview(review) {
@@ -225,12 +237,14 @@
     const div = document.createElement('div');
     div.className = 'review-card';
     div.innerHTML = `
-        <div style="display:flex; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>To: ${review.targetName}</strong>
             <span class="stars-display">${'★'.repeat(review.stars)}</span>
         </div>
         <div class="comment-text">"${review.comment}"</div>
-        <small style="color:#94a3b8">From: ${review.reviewerName}</small>
+        <div style="margin-top:8px; font-size:0.75rem; color:#94a3b8;">
+            By: ${review.reviewerName} • ${new Date(review.timestamp).toLocaleDateString()}
+        </div>
     `;
     reviewsList.prepend(div);
   }
